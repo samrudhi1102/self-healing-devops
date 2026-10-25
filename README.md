@@ -2,6 +2,21 @@
 
 A local FastAPI and Docker project demonstrating health checks and recovery with a PowerShell watchdog. No AWS or paid cloud services are required.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    User[Client] -->|HTTP :8002| Compose[Docker Compose]
+    Compose -->|maps to :8000| API[FastAPI app]
+    API --> Health[/health endpoint/]
+    Docker[Docker health check] -->|checks /health| API
+    Watchdog[PowerShell watchdog] -->|checks localhost:8002/health| API
+    Watchdog -->|restarts only the named app container| Container[self-healing-compose-app]
+    Container --> API
+    Actions[GitHub Actions] -->|pytest and Docker build| CI[CI workflow]
+```
+
+
 ## Components
 - FastAPI app with `/`, `/health`, `/ready`, and `/info` endpoints.
 - Docker image and Compose service; host port 8002 maps to container port 8000.
@@ -41,7 +56,7 @@ Docker HEALTHCHECK reports whether the app responds to `/health`. Compose `unles
 
 ## CI and verified evidence
 The workflow `.github/workflows/ci.yml` runs tests and builds an image on pushes and pull requests to `main`. GitHub Actions: https://github.com/samrudhi1102/self-healing-devops/actions
-Verified: all four endpoints responded on port 8002; no-cache Docker build succeeded; recreated container reported running and healthy; recovery log recorded a successful recovery. GitHub Actions run #1 passed for commit `c3277ca`; later untracked files were not included.
+Verified: all four endpoints responded on port 8002; no-cache Docker build succeeded; recreated container reported running and healthy; recovery log recorded a successful recovery. GitHub Actions run for commit `dab12d8` passed (tests and Docker image build). The earlier `c3277ca` run also passed.
 
 ## Limitations
 Single-machine demonstration. The watchdog must be started manually; there is no alerting, cloud deployment, or external dependency monitoring. The health endpoint checks HTTP responsiveness only; dependencies are not pinned to exact versions.
